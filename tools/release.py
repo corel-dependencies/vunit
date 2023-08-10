@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Create and validates new tagged release commits
@@ -35,7 +35,7 @@ def main():
         validate_new_release(version, pre_tag=True)
         make_release_commit(version)
 
-        new_version = f"{major:d}.{minor:d}.{patch + 1:d}rc0"
+        new_version = f"{major:d}.{minor:d}.{patch + 1:d}-dev"
         set_version(new_version)
         make_next_pre_release_commit(new_version)
 

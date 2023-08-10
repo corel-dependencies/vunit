@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Dependency requirements differ between simulators. This file contains
@@ -49,6 +49,7 @@ class TestDependencies(unittest.TestCase):
                 argv.append("--clean")
 
             ui = VUnit.from_argv(argv=argv)
+            ui.add_vhdl_builtins()
             lib = ui.add_library("lib")
             lib.add_source_files(tb_pkg_file_name)
             lib.add_source_files(pkg_file_name)

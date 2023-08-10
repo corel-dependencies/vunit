@@ -1,7 +1,7 @@
 .. _logging_library:
 
-Logging Library
-===============
+Logging Library User Guide
+==========================
 
 Introduction
 ------------
@@ -279,6 +279,8 @@ counted to get statistics on disabled log messages.
     disable(get_logger("memory_ip:timing_check"), warning);
 
 
+.. _logging_library:LogLocation:
+
 Log Location
 ------------
 
@@ -301,6 +303,7 @@ the ``run.py`` file like this:
 .. code-block:: python
 
     ui = VUnit.from_argv()
+    ui.add_vhdl_builtins()
     ui.enable_location_preprocessing()
 
 Regardless of method the location information is appended to the end of the log entry:
@@ -352,6 +355,26 @@ and then let the location preprocessor know about the added procedure
 
     ui = VUnit.from_argv()
     ui.enable_location_preprocessing(additional_subprograms=['my_convenience_procedure'])
+
+External Logging Framework Integration
+--------------------------------------
+
+VUnit provides a package ``common_log_pkg`` providing a single procedure ``write_to_log`` that is used to
+output the string produced by a log entry. The implementation of this procedure can be changed to redirect VUnit log
+messages to a third party logging framework, thereby aligning the logging styles in a testbench with code using several
+logging frameworks. The feature is enabled by passing a reference to the file implementing the package body:
+
+.. code-block:: python
+
+    ui.add_vhdl_builtins(use_external_log="path/to/other/common_log_pkg/body")
+
+The procedure interface is designed to be generic and suitable for third party logging frameworks as well. If provided,
+third party log messages can also be redirected to VUnit logging:
+
+.. literalinclude:: ../../vunit/vhdl/logging/src/common_log_pkg.vhd
+   :language: vhdl
+   :lines: 7-
+
 
 Deprecated Interfaces
 ---------------------

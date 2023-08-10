@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -449,7 +449,6 @@ begin
       wait until rising_edge(aclk);
 
       set_phase(runner_state, test_runner_cleanup);
-      notify(runner);
       entry_gate(runner);
 
       check_only_log(rule_logger, "Unconditional check failed for packet completion for the following streams: 0.", error);

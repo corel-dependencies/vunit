@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 from pathlib import Path
 from itertools import product
@@ -11,8 +11,10 @@ from vunit import VUnit
 ROOT = Path(__file__).parent
 
 UI = VUnit.from_argv()
+UI.add_vhdl_builtins()
 UI.add_random()
 UI.add_verification_components()
+
 LIB = UI.library("vunit_lib")
 LIB.add_source_files(ROOT / "test" / "*.vhd")
 

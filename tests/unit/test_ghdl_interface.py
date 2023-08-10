@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Test the GHDL interface
@@ -204,7 +204,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."""
         project = Project()
         project.add_library("lib", "lib_path")
         source_file = project.add_source_file("file.vhd", "lib", file_type="vhdl")
-        source_file.set_compile_option("ghdl.flags", ["custom", "flags"])
+        source_file.set_compile_option("ghdl.a_flags", ["custom", "flags"])
         simif.compile_project(project)
         check_output.assert_called_once_with(
             [

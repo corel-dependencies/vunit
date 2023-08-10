@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Simulator interface(s)
@@ -73,6 +73,13 @@ class SimulatorInterface(object):  # pylint: disable=too-many-public-methods
         Returns True when this simulator supports VHDL contexts
         """
         return True
+
+    @classmethod
+    def supports_vhdl_call_paths(cls):
+        """
+        Returns True when this simulator supports VHDL-2019 call paths
+        """
+        return False
 
     @staticmethod
     def find_executable(executable):
@@ -294,6 +301,8 @@ class SimulatorInterface(object):  # pylint: disable=too-many-public-methods
 
         if failures:
             printer.write("Compile failed\n", fg="ri")
+            if continue_on_error:
+                return
             raise CompileError
 
         if source_files:

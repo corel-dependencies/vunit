@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 from os import getenv
 import glob
@@ -15,6 +15,7 @@ def main():
     root = Path(__file__).parent
 
     ui = VUnit.from_argv()
+    ui.add_vhdl_builtins()
 
     vunit_lib = ui.library("vunit_lib")
     files = glob.glob(str(root / "test" / "*.vhd"))

@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -149,8 +149,7 @@ begin
     check_that_streams_have_ended : process
       variable incomplete_streams : line;
     begin
-      lock_entry(runner, test_runner_cleanup);
-      wait_until(runner, test_runner_cleanup);
+      wait until is_active(runner_phase) and is_within_gates_of(test_runner_cleanup);
 
       if tid'length = 0 then
         check(rule9_checker, get(active_streams, 0) = 0, result("for packet completion."));
@@ -173,7 +172,6 @@ begin
         end if;
       end if;
 
-      unlock_entry(runner, test_runner_cleanup);
       wait;
     end process;
   end block;

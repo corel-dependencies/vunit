@@ -3,6 +3,7 @@ name: 'push'
 on:
   push:
   pull_request:
+  workflow_dispatch:
   schedule:
     - cron: '0 0 * * 5'
 
@@ -70,10 +71,10 @@ jobs:
       run: tox -e py${{ matrix.task }} -- --color=yes
 
 #
-# Docker (Linux) acceptance tests
+# Docker (Linux) tests (GHDL)
 #
 
-  docker:
+  ghdl:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -94,6 +95,32 @@ jobs:
       run: docker run --rm -tv $(pwd):/src -w /src ghcr.io/vunit/dev/${{ matrix.task.tag }} tox -e py${{ matrix.task.do }}-ghdl
 
 #
+# Docker (Linux) tests (NVC)
+#
+
+  nvc:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [
+          {do: 39-acceptance},
+          {do: 39-vcomponents},
+        ]
+    name: '🛳️ Container · ${{ matrix.task.do }} · NVC'
+    steps:
+
+    - name: '🧰 Checkout'
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: '🚧 Run job'
+      uses: docker://ghcr.io/vunit/dev/nvc
+      with:
+        args: tox -e py${{ matrix.task.do }}-nvc
+
+#
 # Windows (MSYS2) with 'nightly' GHDL
 #
 
@@ -103,10 +130,10 @@ jobs:
       fail-fast: false
       matrix:
         task: [
-          39-acceptance-ghdl,
-          39-vcomponents-ghdl,
-          39-lint,
-          39-unit,
+          310-acceptance-ghdl,
+          310-vcomponents-ghdl,
+          310-lint,
+          310-unit,
         ]
     name: '🟦 Windows · nightly · ${{ matrix.task }}'
     defaults:
@@ -143,7 +170,12 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [ fmt, lin, docker, win ]
+    needs:
+      - fmt
+      - lin
+      - ghdl
+      - nvc
+      - win
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     name: '🚀 Deploy'
     steps:

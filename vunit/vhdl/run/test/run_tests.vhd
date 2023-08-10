@@ -4,7 +4,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 library vunit_lib;
 use vunit_lib.string_ops.all;
@@ -17,6 +17,7 @@ use vunit_lib.run_types_pkg.all;
 use vunit_lib.run_pkg.all;
 use vunit_lib.runner_pkg.all;
 use vunit_lib.core_pkg;
+use vunit_lib.event_common_pkg.all;
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -58,75 +59,92 @@ begin
   end process;
 
   test_process2 : process is
+    constant test_suite_setup_entry_key : key_t := get_entry_key(test_suite_setup);
+    constant test_suite_setup_exit_key : key_t := get_exit_key(test_suite_setup);
   begin
     wait until start_test_process2;
-    lock_entry(runner, test_suite_setup);
-    lock_exit(runner, test_suite_setup);
+    lock(runner, test_suite_setup_entry_key);
+    lock(runner, test_suite_setup_exit_key);
     wait for 7 ns;
-    unlock_entry(runner, test_suite_setup);
+    unlock(runner, test_suite_setup_entry_key);
     wait for 4 ns;
-    unlock_exit(runner, test_suite_setup);
+    unlock(runner, test_suite_setup_exit_key);
     wait;
   end process;
 
   locking_proc1: process is
+    constant test_runner_setup_entry_key : key_t := get_entry_key(test_runner_setup);
+    constant test_runner_setup_exit_key : key_t := get_exit_key(test_runner_setup);
+    constant test_suite_setup_entry_key : key_t := get_entry_key(test_suite_setup);
+    constant test_suite_setup_exit_key : key_t := get_exit_key(test_suite_setup);
+    constant test_case_setup_entry_key : key_t := get_entry_key(test_case_setup);
+    constant test_case_setup_exit_key : key_t := get_exit_key(test_case_setup);
+    constant test_case_entry_key : key_t := get_entry_key(test_case);
+    constant test_case_exit_key : key_t := get_exit_key(test_case);
+    constant test_case_cleanup_entry_key : key_t := get_entry_key(test_case_cleanup);
+    constant test_case_cleanup_exit_key : key_t := get_exit_key(test_case_cleanup);
+    constant test_suite_cleanup_entry_key : key_t := get_entry_key(test_suite_cleanup);
+    constant test_suite_cleanup_exit_key : key_t := get_exit_key(test_suite_cleanup);
+    constant test_runner_cleanup_entry_key : key_t := get_entry_key(test_runner_cleanup);
+    constant test_runner_cleanup_exit_key : key_t := get_exit_key(test_runner_cleanup);
   begin
     wait until start_locking_process = true;
-    lock_entry(runner, test_runner_setup, locking_proc1_logger);
-    lock_exit(runner, test_runner_setup, locking_proc1_logger);
-    lock_entry(runner, test_suite_setup, locking_proc1_logger);
-    lock_exit(runner, test_suite_setup, locking_proc1_logger);
+    lock(runner, test_runner_setup_entry_key, locking_proc1_logger);
+    lock(runner, test_runner_setup_exit_key, locking_proc1_logger);
+    lock(runner, test_suite_setup_entry_key, locking_proc1_logger);
+    lock(runner, test_suite_setup_exit_key, locking_proc1_logger);
     wait for 2 ns;
-    unlock_entry(runner, test_runner_setup, locking_proc1_logger);
+    unlock(runner, test_runner_setup_entry_key, locking_proc1_logger);
     wait for 1 ns;
-    unlock_exit(runner, test_runner_setup, locking_proc1_logger);
+    unlock(runner, test_runner_setup_exit_key, locking_proc1_logger);
     wait for 1 ns;
-    unlock_entry(runner, test_suite_setup, locking_proc1_logger);
+    unlock(runner, test_suite_setup_entry_key, locking_proc1_logger);
     wait for 3 ns;
 
-    lock_entry(runner, test_case_setup, locking_proc1_logger);
-    lock_exit(runner, test_case_setup, locking_proc1_logger);
-    lock_entry(runner, test_case, locking_proc1_logger);
-    lock_exit(runner, test_case, locking_proc1_logger);
-    lock_entry(runner, test_case_cleanup, locking_proc1_logger);
-    lock_exit(runner, test_case_cleanup, locking_proc1_logger);
-    lock_entry(runner, test_suite_cleanup, locking_proc1_logger);
-    lock_exit(runner, test_suite_cleanup, locking_proc1_logger);
-    lock_entry(runner, test_runner_cleanup, locking_proc1_logger);
-    lock_exit(runner, test_runner_cleanup, locking_proc1_logger);
+    lock(runner, test_case_setup_entry_key, locking_proc1_logger);
+    lock(runner, test_case_setup_exit_key, locking_proc1_logger);
+    lock(runner, test_case_entry_key, locking_proc1_logger);
+    lock(runner, test_case_exit_key, locking_proc1_logger);
+    lock(runner, test_case_cleanup_entry_key, locking_proc1_logger);
+    lock(runner, test_case_cleanup_exit_key, locking_proc1_logger);
+    lock(runner, test_suite_cleanup_entry_key, locking_proc1_logger);
+    lock(runner, test_suite_cleanup_exit_key, locking_proc1_logger);
+    lock(runner, test_runner_cleanup_entry_key, locking_proc1_logger);
+    lock(runner, test_runner_cleanup_exit_key, locking_proc1_logger);
 
     wait for 1 ns;
-    unlock_exit(runner, test_suite_setup, locking_proc1_logger);
+    unlock(runner, test_suite_setup_exit_key, locking_proc1_logger);
     wait for 1 ns;
-    unlock_entry(runner, test_case_setup, locking_proc1_logger);
+    unlock(runner, test_case_setup_entry_key, locking_proc1_logger);
     wait for 2 ns;
-    unlock_exit(runner, test_case_setup, locking_proc1_logger);
+    unlock(runner, test_case_setup_exit_key, locking_proc1_logger);
     wait for 1 ns;
-    unlock_entry(runner, test_case, locking_proc1_logger);
+    unlock(runner, test_case_entry_key, locking_proc1_logger);
     wait for 2 ns;
-    unlock_exit(runner, test_case, locking_proc1_logger);
+    unlock(runner, test_case_exit_key, locking_proc1_logger);
     wait for 1 ns;
-    unlock_entry(runner, test_case_cleanup, locking_proc1_logger);
+    unlock(runner, test_case_cleanup_entry_key, locking_proc1_logger);
     wait for 2 ns;
-    unlock_exit(runner, test_case_cleanup, locking_proc1_logger);
+    unlock(runner, test_case_cleanup_exit_key, locking_proc1_logger);
     wait for 4 ns;
-    unlock_entry(runner, test_suite_cleanup, locking_proc1_logger);
+    unlock(runner, test_suite_cleanup_entry_key, locking_proc1_logger);
     wait for 2 ns;
-    unlock_exit(runner, test_suite_cleanup, locking_proc1_logger);
+    unlock(runner, test_suite_cleanup_exit_key, locking_proc1_logger);
     wait for 1 ns;
-    unlock_entry(runner, test_runner_cleanup, locking_proc1_logger);
+    unlock(runner, test_runner_cleanup_entry_key, locking_proc1_logger);
     wait for 1 ns;
-    unlock_exit(runner, test_runner_cleanup, locking_proc1_logger);
+    unlock(runner, test_runner_cleanup_exit_key, locking_proc1_logger);
     wait;
   end process locking_proc1;
 
   locking_proc2: process is
+    constant key : key_t := get_exit_key(test_runner_cleanup);
   begin
     wait until start_locking_process = true;
     wait for 6 ns;
-    lock_exit(runner, test_runner_cleanup, locking_proc2_logger);
+    lock(runner, key, locking_proc2_logger);
     wait for 21 ns;
-    unlock_exit(runner, test_runner_cleanup, locking_proc2_logger);
+    unlock(runner, key, locking_proc2_logger);
     wait;
   end process locking_proc2;
 
@@ -155,11 +173,7 @@ begin
     begin
       runner_init(runner_state);
       runner(runner_exit_status_idx) <= runner_exit_with_errors;
-      if runner(runner_event_idx) /= runner_event then
-        runner(runner_event_idx) <= runner_event;
-        wait until runner(runner_event_idx) = runner_event;
-        runner(runner_event_idx) <= idle_runner;
-      end if;
+      notify(runner_phase);
     end;
 
     constant c : checker_t := new_checker("checker_t", default_log_level => failure);
@@ -187,6 +201,10 @@ begin
     variable my_checker : checker_t;
     variable error_counter : natural := 0;
     constant test_runner_logger : logger_t := get_logger("test_runner");
+    constant test_runner_setup_entry_key : key_t := get_entry_key(test_runner_setup);
+    constant test_runner_setup_exit_key : key_t := get_exit_key(test_runner_setup);
+    constant test_case_setup_entry_key : key_t := get_entry_key(test_case_setup);
+    constant test_case_setup_exit_key : key_t := get_exit_key(test_case_setup);
 
   begin
     banner("Should extract single enabled test case from input string");
@@ -532,19 +550,6 @@ begin
     test_case_cleanup;
 
     ---------------------------------------------------------------------------
-    banner("Test that unlocking an unlocked phase will trigger a failure");
-    test_case_setup;
-    mock(runner_trace_logger);
-    unlock_entry(runner, test_runner_setup);
-    unlock_exit(runner, test_runner_setup);
-    check_log(runner_trace_logger, "No locks to unlock on test runner setup entry gate.", failure);
-    check_log(runner_trace_logger, "Unlocked test runner setup phase entry gate.", trace);
-    check_log(runner_trace_logger, "No locks to unlock on test runner setup exit gate.", failure);
-    check_log(runner_trace_logger, "Unlocked test runner setup phase exit gate.", trace);
-    unmock(runner_trace_logger);
-    test_case_cleanup;
-
-    ---------------------------------------------------------------------------
     banner("Should be possible to read current test case name");
     test_case_setup;
     test_runner_setup(runner, "enabled_test_cases : test a,, test b");
@@ -741,10 +746,10 @@ begin
 
     test_runner_setup(runner, "enabled_test_cases : test a");
     mock(runner_trace_logger);
-    lock_entry(runner, test_case_setup, line_num => 17, file_name => "foo1.vhd");
-    lock_exit(runner, test_case_setup, line_num => 18, file_name => "foo2.vhd");
-    unlock_entry(runner, test_case_setup, line_num => 19, file_name => "foo3.vhd");
-    unlock_exit(runner, test_case_setup, line_num => 20, file_name => "foo4.vhd");
+    lock(runner, test_case_setup_entry_key, runner_trace_logger, line_num => 17, file_name => "foo1.vhd");
+    lock(runner, test_case_setup_exit_key, runner_trace_logger, line_num => 18, file_name => "foo2.vhd");
+    unlock(runner, test_case_setup_entry_key, runner_trace_logger, line_num => 19, file_name => "foo3.vhd");
+    unlock(runner, test_case_setup_exit_key, runner_trace_logger, line_num => 20, file_name => "foo4.vhd");
     check_log(runner_trace_logger, "Locked test case setup phase entry gate.", trace,
               line_num => 17, file_name => "foo1.vhd");
     check_log(runner_trace_logger, "Locked test case setup phase exit gate.", trace,

@@ -5,7 +5,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -14,6 +14,9 @@ use std.textio.all;
 use work.checker_pkg.all;
 use work.logger_pkg.all;
 use work.log_levels_pkg.all;
+use work.string_ops.all;
+use work.event_common_pkg.all;
+use work.string_ptr_pkg.all;
 
 package check_pkg is
 
@@ -26,11 +29,18 @@ package check_pkg is
   impure function get_checker_stat return checker_stat_t;
   procedure reset_checker_stat;
 
-  constant check_result_tag : string    := "<+/->";
-  function result (msg : string := "") return string;
+  -- TODO: Make an alias when NVC compiles correctly
+  --alias check_result_tag is decorate_tag;
+  constant check_result_tag : string := "<+/->";
+  --alias result is decorate[string return string];
+  function result(str : string := "") return string;
 
   type edge_t is (rising_edge, falling_edge, both_edges);
   type trigger_event_t is (first_pipe, first_no_pipe, penultimate);
+
+  procedure log(check_result : check_result_t);
+
+  procedure notify_if_fail(check_result : check_result_t; signal event : inout any_event_t);
 
   -----------------------------------------------------------------------------
   -- check
@@ -92,6 +102,15 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check(
+    constant expr        : in boolean;
+    constant msg         : in string      := check_result_tag & ".";
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check(
     signal clock               : in std_logic;
     signal en                  : in std_logic;
@@ -112,6 +131,17 @@ package check_pkg is
     constant line_num    : in natural     := 0;
     constant file_name   : in string      := "")
     return boolean;
+
+  impure function check(
+    constant checker     : in checker_t;
+    constant expr        : in boolean;
+    constant msg         : in string      := check_result_tag & ".";
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
 
   -----------------------------------------------------------------------------
   -- check_passed
@@ -207,6 +237,15 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_true(
+    constant expr        : in boolean;
+    constant msg         : in string      := check_result_tag & ".";
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_true(
     signal clock               : in std_logic;
     signal en                  : in std_logic;
@@ -227,6 +266,16 @@ package check_pkg is
     constant line_num    : in natural     := 0;
     constant file_name   : in string      := "")
     return boolean;
+
+  impure function check_true(
+    constant checker     : in checker_t;
+    constant expr        : in boolean;
+    constant msg         : in string      := check_result_tag & ".";
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
 
   -----------------------------------------------------------------------------
   -- check_false
@@ -1117,6 +1166,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in unsigned;
+    constant expected    : in unsigned;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in unsigned;
+    constant expected    : in unsigned;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in unsigned;
     constant expected    : in natural;
@@ -1177,6 +1247,27 @@ package check_pkg is
     constant line_num    : in natural     := 0;
     constant file_name   : in string      := "")
     return boolean;
+
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in unsigned;
+    constant expected    : in natural;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in unsigned;
+    constant expected    : in natural;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
 
   procedure check_equal(
     constant got         : in natural;
@@ -1239,6 +1330,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in natural;
+    constant expected    : in unsigned;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in natural;
+    constant expected    : in unsigned;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in unsigned;
     constant expected    : in std_logic_vector;
@@ -1299,6 +1411,27 @@ package check_pkg is
     constant line_num    : in natural     := 0;
     constant file_name   : in string      := "")
     return boolean;
+
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in unsigned;
+    constant expected    : in std_logic_vector;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in unsigned;
+    constant expected    : in std_logic_vector;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
 
   procedure check_equal(
     constant got         : in std_logic_vector;
@@ -1361,6 +1494,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in std_logic_vector;
+    constant expected    : in unsigned;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in std_logic_vector;
+    constant expected    : in unsigned;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in std_logic_vector;
     constant expected    : in std_logic_vector;
@@ -1422,6 +1576,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in std_logic_vector;
+    constant expected    : in std_logic_vector;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in std_logic_vector;
+    constant expected    : in std_logic_vector;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in std_logic_vector;
     constant expected    : in natural;
@@ -1482,6 +1657,27 @@ package check_pkg is
     constant line_num    : in natural     := 0;
     constant file_name   : in string      := "")
     return boolean;
+
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in std_logic_vector;
+    constant expected    : in natural;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in std_logic_vector;
+    constant expected    : in natural;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
 
   procedure check_equal(
     constant got         : in natural;
@@ -1544,6 +1740,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in natural;
+    constant expected    : in std_logic_vector;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in natural;
+    constant expected    : in std_logic_vector;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in signed;
     constant expected    : in signed;
@@ -1605,6 +1822,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in signed;
+    constant expected    : in signed;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in signed;
+    constant expected    : in signed;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in signed;
     constant expected    : in integer;
@@ -1665,6 +1903,27 @@ package check_pkg is
     constant line_num    : in natural     := 0;
     constant file_name   : in string      := "")
     return boolean;
+
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in signed;
+    constant expected    : in integer;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in signed;
+    constant expected    : in integer;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
 
   procedure check_equal(
     constant got         : in integer;
@@ -1727,6 +1986,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in integer;
+    constant expected    : in signed;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in integer;
+    constant expected    : in signed;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in integer;
     constant expected    : in integer;
@@ -1788,6 +2068,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in integer;
+    constant expected    : in integer;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in integer;
+    constant expected    : in integer;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in std_logic;
     constant expected    : in std_logic;
@@ -1849,6 +2150,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in std_logic;
+    constant expected    : in std_logic;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in std_logic;
+    constant expected    : in std_logic;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in std_logic;
     constant expected    : in boolean;
@@ -1909,6 +2231,27 @@ package check_pkg is
     constant line_num    : in natural     := 0;
     constant file_name   : in string      := "")
     return boolean;
+
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in std_logic;
+    constant expected    : in boolean;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in std_logic;
+    constant expected    : in boolean;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
 
   procedure check_equal(
     constant got         : in boolean;
@@ -1971,6 +2314,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in boolean;
+    constant expected    : in std_logic;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in boolean;
+    constant expected    : in std_logic;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in boolean;
     constant expected    : in boolean;
@@ -2031,6 +2395,27 @@ package check_pkg is
     constant line_num    : in natural     := 0;
     constant file_name   : in string      := "")
     return boolean;
+
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in boolean;
+    constant expected    : in boolean;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in boolean;
+    constant expected    : in boolean;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
 
   procedure check_equal(
     constant got         : in string;
@@ -2093,6 +2478,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in string;
+    constant expected    : in string;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in string;
+    constant expected    : in string;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in character;
     constant expected    : in character;
@@ -2154,6 +2560,27 @@ package check_pkg is
     constant file_name   : in string      := "")
     return boolean;
 
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in character;
+    constant expected    : in character;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in character;
+    constant expected    : in character;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
   procedure check_equal(
     constant got         : in time;
     constant expected    : in time;
@@ -2214,6 +2641,27 @@ package check_pkg is
     constant line_num    : in natural     := 0;
     constant file_name   : in string      := "")
     return boolean;
+
+  impure function check_equal(
+    constant checker     : in checker_t;
+    constant got         : in time;
+    constant expected    : in time;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
+
+  impure function check_equal(
+    constant got         : in time;
+    constant expected    : in time;
+    constant msg         : in string      := check_result_tag;
+    constant level       : in log_level_t := null_log_level;
+    constant path_offset : in natural     := 0;
+    constant line_num    : in natural     := 0;
+    constant file_name   : in string      := "")
+    return check_result_t;
 
   -----------------------------------------------------------------------------
   -- check_match

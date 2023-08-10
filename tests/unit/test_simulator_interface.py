@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Test the SimulatorInterface class
@@ -117,13 +117,7 @@ Compile passed
         with mock.patch("vunit.sim_if.check_output", autospec=True) as check_output:
             check_output.side_effect = check_output_side_effect
             printer = MockPrinter()
-            self.assertRaises(
-                CompileError,
-                simif.compile_source_files,
-                project,
-                printer=printer,
-                continue_on_error=True,
-            )
+            simif.compile_source_files(project, printer=printer, continue_on_error=True)
             self.assertEqual(
                 printer.output,
                 """\

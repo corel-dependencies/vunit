@@ -4,7 +4,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 library vunit_lib;
 context vunit_lib.vunit_context;
@@ -401,6 +401,18 @@ begin
         send(net, actor, msg);
         receive(net, actor, msg2);
         check_equal(pop_string(msg2), "hello");
+
+      elsif run("Test that many back-to-back messages don't hit the simulator's delta cycle limit") then
+        actor := new_actor;
+        for iter in 1 to 10000 loop
+          msg   := new_msg;
+          push(msg, iter);
+          send(net, actor, msg);
+        end loop;
+        for iter in 1 to 10000 loop
+          receive(net, actor, msg2);
+          check_equal(pop_integer(msg2), iter);
+        end loop;
 
       elsif run("Test that an actor can poll for incoming messages") then
         wait_for_message(net, self, status, 0 ns);

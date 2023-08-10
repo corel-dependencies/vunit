@@ -8,10 +8,53 @@ build-backend = "setuptools.build_meta"
 [tool.black]
 line-length = 120
 
+[tool.towncrier]
+package = "vunit"
+package_dir = "vunit"
+single_file = false
+filename="docs/news.inc"
+directory = "docs/news.d/"
+title_format = false
+issue_format = ":vunit_issue:`{issue}`"
+underlines = ["-", "~"]
+
+    [[tool.towncrier.section]]
+    path = ""
+
+    [[tool.towncrier.type]]
+    directory = "breaking"
+    name = "Breaking Changes"
+    showcontent = true
+
+    [[tool.towncrier.type]]
+    directory = "bugfix"
+    name = "Bug Fixes"
+    showcontent = true
+
+    [[tool.towncrier.type]]
+    directory = "deprecation"
+    name = "Deprecations"
+    showcontent = true
+
+    [[tool.towncrier.type]]
+    directory = "doc"
+    name = "Documentation"
+    showcontent = true
+
+    [[tool.towncrier.type]]
+    directory = "feature"
+    name = "Features"
+    showcontent = true
+
+    [[tool.towncrier.type]]
+    directory = "misc"
+    name = "Miscellaneous"
+    showcontent = true
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py{36,37,38,39,310,311}-{fmt,unit,lint,docs}, py{36,37,38,39,310,311}-{acceptance,vcomponents}-{activehdl,ghdl,modelsim,rivierapro}, py{36,37,38,39,310,311}-coverage
+envlist = py{36,37,38,39,310,311}-{fmt,unit,lint,docs}, py{36,37,38,39,310,311}-{acceptance,vcomponents}-{activehdl,ghdl,modelsim,nvc,rivierapro}, py{36,37,38,39,310,311}-coverage
 isolated_build = True
 
 [testenv]
@@ -31,13 +74,16 @@ deps=
     coverage: mypy
     coverage: Pygments
     docs: docutils
+    docs: furo
     docs: sphinx
     docs: sphinx-argparse
+    docs: towncrier
 
 setenv=
     acceptance-activehdl:  VUNIT_SIMULATOR=activehdl
     acceptance-ghdl:       VUNIT_SIMULATOR=ghdl
     acceptance-modelsim:   VUNIT_SIMULATOR=modelsim
+    acceptance-nvc:        VUNIT_SIMULATOR=nvc
     acceptance-rivierapro: VUNIT_SIMULATOR=rivierapro
 
 commands=

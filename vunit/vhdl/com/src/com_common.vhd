@@ -5,30 +5,29 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 library ieee;
 use ieee.std_logic_1164.all;
 
 use work.com_messenger_pkg.all;
 use work.com_types_pkg.all;
+use work.event_common_pkg.all;
+use work.event_private_pkg.all;
 
 package com_common_pkg is
   shared variable messenger :       messenger_t;
 
-  procedure notify (signal net : inout network_t);
-
+  procedure notify_net(signal net : inout basic_event_t);
   impure function no_error_status (status : com_status_t; old_api : boolean := false) return boolean;
 end package com_common_pkg;
 
 package body com_common_pkg is
-  procedure notify (signal net : inout network_t) is
+  procedure notify_net(signal net : inout basic_event_t) is
   begin
-    if net /= network_event then
-      net <= network_event;
-      wait until net = network_event;
-      net <= idle_network;
+    if not is_active(net) then
+      notify(net, n_delta_cycles => 0);
     end if;
-  end procedure notify;
+  end;
 
   impure function no_error_status (status : com_status_t; old_api : boolean := false) return boolean is
   begin
