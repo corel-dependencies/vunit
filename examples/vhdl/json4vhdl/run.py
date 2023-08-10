@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 JSON-for-VHDL
@@ -22,6 +22,7 @@ from vunit.json4vhdl import read_json, encode_json, b16encode
 TEST_PATH = Path(__file__).parent / "src" / "test"
 
 VU = VUnit.from_argv()
+VU.add_vhdl_builtins()
 VU.add_json4vhdl()
 
 LIB = VU.add_library("test")

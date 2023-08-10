@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 from pathlib import Path
 from glob import glob
@@ -11,12 +11,16 @@ from vunit import VUnit
 root = Path(__file__).parent
 
 vu = VUnit.from_argv()
+vu.add_vhdl_builtins()
+
 lib = vu.add_library("lib")
 lib2 = vu.add_library("lib2")
-files = glob(str(root / "*.vhd"))
-for file in files:
+
+for file in glob(str(root / "*.vhd")):
     if "tb_set_generic" in file:
         lib2.add_source_files(file)
+    elif "other_logging_framework" in file:
+        continue
     else:
         lib.add_source_files(file)
 

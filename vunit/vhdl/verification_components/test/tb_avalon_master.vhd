@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 -- Author Slawomir Siluk slaweksiluk@gazeta.pl
 
 library ieee;
@@ -118,10 +118,10 @@ begin
     rnd.InitSeed(rnd'instance_name);
     test_runner_setup(runner, runner_cfg);
     set_format(display_handler, verbose, true);
-    show(tb_logger, display_handler, verbose);
-    show(default_logger, display_handler, verbose);
-    show(master_logger, display_handler, verbose);
-    show(com_logger, display_handler, verbose);
+    show(tb_logger, display_handler, trace);
+    show(default_logger, display_handler, trace);
+    show(master_logger, display_handler, trace);
+    show(com_logger, display_handler, trace);
 
     wait until rising_edge(clk);
 

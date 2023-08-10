@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 from pathlib import Path
 from string import Template
@@ -119,7 +119,7 @@ impl_template = """  procedure check_match(
       if is_pass_visible(checker) then
         passing_check(
           checker,
-          std_msg(
+          p_std_msg(
             "Match check passed", msg,
             "Got " & $got_str & ". " &
             "Expected " & $expected_str & "."),
@@ -131,7 +131,7 @@ impl_template = """  procedure check_match(
       pass := false;
       failing_check(
         checker,
-        std_msg(
+        p_std_msg(
           "Match check failed", msg,
           "Got " & $got_str & ". " &
           "Expected " & $expected_str & "."),
@@ -385,7 +385,7 @@ def generate_test():
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 -- vunit: run_all_in_same_sim
 

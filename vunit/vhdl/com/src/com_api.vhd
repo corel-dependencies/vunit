@@ -5,7 +5,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -15,11 +15,12 @@ use work.queue_pkg.all;
 use work.integer_vector_ptr_pkg.all;
 use work.string_ptr_pkg.all;
 use work.id_pkg.all;
+use work.event_private_pkg.all;
 
 package com_pkg is
   -- Global predefined network. See network_t description in com_types.vhd for
   -- more information.
-  signal net : network_t := idle_network;
+  signal net : network_t := new_basic_event(com_net_event);
 
   -----------------------------------------------------------------------------
   -- Handling of actors

@@ -2,13 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2022, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Support functions for creating blogs
 """
 
 import re
+from pathlib import Path
 from pygments import highlight
 from pygments.lexers.hdl import VhdlLexer
 from pygments.lexers.python import PythonLexer
@@ -125,7 +126,7 @@ def highlight_code(
 _CONEMU_COLORS = {
     30: "#002b36",
     31: "#cb4b16",
-    32: "#008080",
+    32: "#008000",
     33: "#859900",
     34: "#073642",
     35: "#9c36b6",
@@ -169,15 +170,21 @@ def create_span(style, fg, bg):
 
     font_weight = font_weights.get(style, None)
     if font_weight is None:
-        raise RuntimeError(f"Unknown style {style}")
+        style, fg = fg, style
 
-    color = _CONEMU_COLORS.get(fg, None)
-    if color is None:
-        raise RuntimeError(f"Unknown foreground color {fg}")
+    if fg:
+        color = _CONEMU_COLORS.get(fg, None)
+        if color is None:
+            raise RuntimeError(f"Unknown foreground color {fg}")
+    else:
+        color = None
 
-    background = _CONEMU_BACKGROUNDS.get(bg, None)
-    if background is None:
-        raise RuntimeError(f"Unknown background color {bg}")
+    if bg:
+        background = _CONEMU_BACKGROUNDS.get(bg, None)
+        if background is None:
+            raise RuntimeError(f"Unknown background color {bg}")
+    else:
+        background = None
 
     span = "<span>"
     if font_weight or color or background:
@@ -201,7 +208,7 @@ def highlight_log(log_path, output_path):
     """Create HTML from VUnit text log with color codes."""
 
     ansi_esc_re = re.compile(r"\x1B\[", re.MULTILINE)
-    color_start_re = re.compile(r"(?P<style>\d+);(?P<fg>\d+);(?P<bg>\d+)m", re.MULTILINE)
+    color_start_re = re.compile(r"(?P<style>\d+)?(;(?P<fg>\d+))?(;(?P<bg>\d+))?m", re.MULTILINE)
     html = f'<div class="highlight" style="background: {_CONEMU_BACKGROUNDS[40]}; color: {_CONEMU_COLORS[37]};">'
     html += f'<pre style="line-height: 125%; background: {_CONEMU_BACKGROUNDS[40]}; color: {_CONEMU_COLORS[37]};">'
 
@@ -220,16 +227,26 @@ def highlight_log(log_path, output_path):
 
         color_start = color_start_re.match(log)
         if not color_start:
-            raise RuntimeError("Expected color start code")
+            raise RuntimeError(f"Expected color start code in {log}")
 
         log = log[color_start.end() :]
-        span = create_span(int(color_start.group("style")), int(color_start.group("fg")), int(color_start.group("bg")))
+        if color_start.group("style"):
+            span = create_span(
+                int(color_start.group("style")),
+                int(color_start.group("fg")) if color_start.group("fg") is not None else None,
+                int(color_start.group("bg")) if color_start.group("bg") is not None else None,
+            )
+        else:
+            span = None
 
         color_end = ansi_esc_re.search(log)
         if not color_end:
             raise RuntimeError("No matching end of ANSI color code")
 
-        html += span + log[: color_end.start()] + "</span>"
+        if span:
+            html += span + log[: color_end.start()] + "</span>"
+        else:
+            html += log[: color_end.start()]
 
         if log[color_end.end() : color_end.end() + 2] == "0m":
             log = log[color_end.end() + 2 :]
@@ -239,3 +256,17 @@ def highlight_log(log_path, output_path):
     html += "</pre></div>\n"
 
     output_path.write_text(html)
+
+
+class LogRegistry:
+    """Registry log paths from which html documents shall be generated."""
+
+    def __init__(self):
+        self._paths = {}
+
+    def register(self, log_path, html_path):
+        self._paths[log_path] = html_path
+
+    def generate_logs(self):
+        for log_path, html_path in self._paths.items():
+            highlight_log(Path(log_path), Path(html_path))
