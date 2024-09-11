@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Contains Configuration class which contains configuration of a test run
@@ -192,6 +192,9 @@ class ConfigurationVisitor(object):
     An interface to visit simulation run configurations
     """
 
+    def __init__(self, design_unit):
+        self.design_unit = design_unit
+
     def _check_enabled(self):
         pass
 
@@ -258,6 +261,24 @@ class ConfigurationVisitor(object):
             for config in configs.values():
                 config.post_check = value
 
+    @staticmethod
+    def _check_architectures(design_unit):
+        """
+        Check that an entity which has been classified as a VUnit test bench
+        has exactly one architecture. Raise RuntimeError otherwise.
+        """
+        if design_unit.is_entity:
+            if not design_unit.architecture_names:
+                raise RuntimeError(f"Test bench '{design_unit.name!s}' has no architecture.")
+
+            if len(design_unit.architecture_names) > 1:
+                archs = ", ".join(
+                    f"{name!s}:{Path(fname).name!s}" for name, fname in sorted(design_unit.architecture_names.items())
+                )
+                raise RuntimeError(
+                    "Test bench not allowed to have multiple architectures. " f"Entity {design_unit.name!s} has {archs}"
+                )
+
     def add_config(  # pylint: disable=too-many-arguments
         self,
         name,
@@ -275,6 +296,8 @@ class ConfigurationVisitor(object):
 
         if name in (DEFAULT_NAME, ""):
             raise ValueError(f"Illegal configuration name {name!r}. Must be non-empty string")
+
+        self._check_architectures(self.design_unit)
 
         for configs in self.get_configuration_dicts():
             if name in configs:

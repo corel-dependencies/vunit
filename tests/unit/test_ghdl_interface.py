@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Test the GHDL interface
@@ -26,22 +26,6 @@ class TestGHDLInterface(unittest.TestCase):
     """
     Test the GHDL interface
     """
-
-    @mock.patch("vunit.sim_if.ghdl.GHDLInterface.find_executable")
-    def test_runtime_error_on_missing_gtkwave(self, find_executable):
-        executables = {}
-
-        def find_executable_side_effect(name):
-            return executables[name]
-
-        find_executable.side_effect = find_executable_side_effect
-
-        executables["gtkwave"] = ["path"]
-        GHDLInterface(prefix="prefix", output_path="")
-
-        executables["gtkwave"] = []
-        GHDLInterface(prefix="prefix", output_path="")
-        self.assertRaises(RuntimeError, GHDLInterface, prefix="prefix", output_path="", gui=True)
 
     @mock.patch("subprocess.check_output", autospec=True)
     def test_parses_llvm_backend(self, check_output):
@@ -81,6 +65,19 @@ GHDL 0.33dev (20141104) [Dunoon edition]
 Written by Tristan Gingold.
 
 Copyright (C) 2003 - 2014 Tristan Gingold.
+GHDL is free software, covered by the GNU General Public License.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+"""
+        check_output.return_value = version
+        self.assertEqual(GHDLInterface.determine_backend("prefix"), "mcode")
+
+        version = b"""\
+GHDL 5.0.0-dev (4.0.0.r9.g77785e49e) [Dunoon edition]
+ Compiled with GNAT Version: 10.5.0
+ static elaboration, mcode JIT code generator
+Written by Tristan Gingold.
+
+Copyright (C) 2003 - 2024 Tristan Gingold.
 GHDL is free software, covered by the GNU General Public License.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 """
@@ -235,7 +232,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."""
 
         self.assertEqual(
             simif._get_command(  # pylint: disable=protected-access
-                config, str(Path("output_path") / "ghdl"), True, True, None
+                config, str(Path("output_path") / "ghdl"), True, True, "tb_entity", None
             ),
             [
                 str(Path("prefix") / "ghdl"),

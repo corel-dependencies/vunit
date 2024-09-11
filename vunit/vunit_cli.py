@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 .. _custom_cli:
@@ -225,10 +225,12 @@ def _create_argument_parser(description=None, for_documentation=False):
     parser.add_argument(
         "-p",
         "--num-threads",
-        type=positive_int,
+        type=nonnegative_int,
         default=1,
         help=(
-            "Number of tests to run in parallel. " "Test output is not continuously written in verbose mode with p > 1"
+            "Number of tests to run in parallel. "
+            "Test output is not continuously written in verbose mode with p != 1. "
+            "p = 0 uses all logical CPUs."
         ),
     )
 
@@ -249,16 +251,16 @@ def _create_argument_parser(description=None, for_documentation=False):
     return parser
 
 
-def positive_int(val):
+def nonnegative_int(val):
     """
-    ArgumentParse positive int check
+    ArgumentParse non-negative int check
     """
     try:
         ival = int(val)
-        assert ival > 0
+        assert ival >= 0
         return ival
     except (ValueError, AssertionError) as exv:
-        raise argparse.ArgumentTypeError(f"'{val!s}' is not a valid positive int") from exv
+        raise argparse.ArgumentTypeError(f"'{val!s}' is not a valid non-negative int") from exv
 
 
 def _parser_for_documentation():

@@ -2,13 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
-
-library ieee;
-use ieee.math_real.all;
-use ieee.math_complex.all;
-use work.codec_pkg.all;
-use work.codec_builder_pkg.all;
+-- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 package body queue_pkg is
   constant tail_idx : natural := 0;

@@ -2,11 +2,12 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 context work.vunit_context;
 context work.com_context;
@@ -16,9 +17,13 @@ use work.stream_master_pkg.all;
 use work.stream_slave_pkg.all;
 use work.sync_pkg.all;
 
+library osvvm;
+use osvvm.RandomPkg.all;
+
 entity tb_axi_stream is
   generic(
     runner_cfg    : string;
+    g_data_length : positive := 8;
     g_id_length   : natural := 8;
     g_dest_length : natural := 8;
     g_user_length : natural := 8;
@@ -35,7 +40,7 @@ architecture a of tb_axi_stream is
   constant slave_stall_config  : stall_config_t := new_stall_config(stall_probability => real(g_stall_percentage_slave)/100.0 , min_stall_cycles => min_stall_cycles, max_stall_cycles => max_stall_cycles);
 
   constant master_axi_stream : axi_stream_master_t := new_axi_stream_master(
-    data_length => 8, id_length => g_id_length, dest_length => g_dest_length, user_length => g_user_length,
+    data_length => g_data_length, id_length => g_id_length, dest_length => g_dest_length, user_length => g_user_length,
     stall_config => master_stall_config, logger => get_logger("master"), actor => new_actor("master"),
     monitor => default_axi_stream_monitor, protocol_checker => default_axi_stream_protocol_checker
   );
@@ -43,7 +48,7 @@ architecture a of tb_axi_stream is
   constant master_sync   : sync_handle_t   := as_sync(master_axi_stream);
 
   constant slave_axi_stream : axi_stream_slave_t := new_axi_stream_slave(
-    data_length => 8, id_length => g_id_length, dest_length => g_dest_length, user_length => g_user_length,
+    data_length => g_data_length, id_length => g_id_length, dest_length => g_dest_length, user_length => g_user_length,
     stall_config => slave_stall_config, logger => get_logger("slave"), actor => new_actor("slave"),
     monitor => default_axi_stream_monitor, protocol_checker => default_axi_stream_protocol_checker
   );
@@ -51,30 +56,30 @@ architecture a of tb_axi_stream is
   constant slave_sync   : sync_handle_t  := as_sync(slave_axi_stream);
 
   constant monitor : axi_stream_monitor_t := new_axi_stream_monitor(
-    data_length => 8, id_length => g_id_length, dest_length => g_dest_length, user_length => g_user_length,
+    data_length => g_data_length, id_length => g_id_length, dest_length => g_dest_length, user_length => g_user_length,
     logger => get_logger("monitor"), actor => new_actor("monitor"),
     protocol_checker => default_axi_stream_protocol_checker
   );
 
   constant protocol_checker : axi_stream_protocol_checker_t := new_axi_stream_protocol_checker(
-    data_length => 8, id_length => g_id_length, dest_length => g_dest_length, user_length => g_user_length,
+    data_length => g_data_length, id_length => g_id_length, dest_length => g_dest_length, user_length => g_user_length,
     logger      => get_logger("protocol_checker"),
     max_waits   => 8
   );
 
   constant n_monitors : natural := 3;
 
-  signal aclk     : std_logic := '0';
+  signal aclk : std_logic := '0';
   signal areset_n : std_logic := '1';
-  signal tvalid   : std_logic;
-  signal tready   : std_logic;
-  signal tdata    : std_logic_vector(data_length(slave_axi_stream)-1 downto 0);
-  signal tlast    : std_logic;
-  signal tkeep    : std_logic_vector(data_length(slave_axi_stream)/8-1 downto 0);
-  signal tstrb    : std_logic_vector(data_length(slave_axi_stream)/8-1 downto 0);
-  signal tid      : std_logic_vector(id_length(slave_axi_stream)-1 downto 0);
-  signal tdest    : std_logic_vector(dest_length(slave_axi_stream)-1 downto 0);
-  signal tuser    : std_logic_vector(user_length(slave_axi_stream)-1 downto 0);
+  signal tvalid : std_logic;
+  signal tready : std_logic;
+  signal tdata : std_logic_vector(data_length(slave_axi_stream)-1 downto 0);
+  signal tlast : std_logic;
+  signal tkeep, tkeep_from_master : std_logic_vector(data_length(slave_axi_stream)/8-1 downto 0);
+  signal tstrb, tstrb_from_master : std_logic_vector(data_length(slave_axi_stream)/8-1 downto 0);
+  signal tid : std_logic_vector(id_length(slave_axi_stream)-1 downto 0);
+  signal tdest : std_logic_vector(dest_length(slave_axi_stream)-1 downto 0);
+  signal tuser : std_logic_vector(user_length(slave_axi_stream)-1 downto 0);
 
   signal not_valid      : std_logic;
   signal not_valid_data : std_logic;
@@ -84,6 +89,8 @@ architecture a of tb_axi_stream is
   signal not_valid_dest : std_logic;
   signal not_valid_user : std_logic;
 
+  signal connected_tkeep : boolean := true;
+  signal connected_tstrb : boolean := true;
   -----------------------------------------------------------------------------
   -- signals used for the statistics for stall evaluation
   type axis_stall_stats_fields_t is record
@@ -130,6 +137,7 @@ begin
     variable timestamp              : time := 0 ns;
 
     variable mocklogger : logger_t;
+    variable rnd : RandomPtype;
 
     procedure get_axi_stream_transaction(variable axi_stream_transaction : out axi_stream_transaction_t) is
     begin
@@ -141,6 +149,7 @@ begin
 
   begin
     test_runner_setup(runner, runner_cfg);
+    rnd.InitSeed("A seed");
     subscribe(subscriber, find("monitor"));
     subscribe(subscriber, find("master"));
     subscribe(subscriber, find("slave"));
@@ -221,6 +230,36 @@ begin
         check_equal(axi_stream_transaction.tid, std_logic_vector'(x"11"), result("pop stream id"));
         check_equal(axi_stream_transaction.tdest, std_logic_vector'(x"22"), result("pop stream dest"));
         check_equal(axi_stream_transaction.tuser, std_logic_vector'(x"33"), result("pop stream user"));
+      end loop;
+
+    elsif run("test disconnecting tstrb and tkeep") then
+      for iter in 1 to 2 loop
+        connected_tstrb <= false;
+        connected_tkeep <= iter = 1;
+        if iter = 1 then
+          push_axi_stream(net, master_axi_stream, x"99", tlast => '1', tkeep => "1", tid => x"11", tdest => x"22", tuser => x"33" );
+        else
+          push_axi_stream(net, master_axi_stream, x"99", tlast => '1', tid => x"11", tdest => x"22", tuser => x"33" );
+        end if;
+        pop_axi_stream(net, slave_axi_stream, data, last, keep, strb, id, dest, user);
+        check_equal(data, std_logic_vector'(x"99"), result("pop axi stream data"));
+        check_equal(last, std_logic'('1'), result("pop stream last"));
+        check_equal(keep, std_logic_vector'("1"), result("pop stream keep"));
+        check_equal(strb, std_logic_vector'("1"), result("pop stream strb"));
+        check_equal(id, std_logic_vector'(x"11"), result("pop stream id"));
+        check_equal(dest, std_logic_vector'(x"22"), result("pop stream dest"));
+        check_equal(user, std_logic_vector'(x"33"), result("pop stream user"));
+
+        for i in 1 to n_monitors loop
+          get_axi_stream_transaction(axi_stream_transaction);
+          check_equal(axi_stream_transaction.tdata, std_logic_vector'(x"99"), result("for axi_stream_transaction.tdata"));
+          check_true(axi_stream_transaction.tlast, result("for axi_stream_transaction.tlast"));
+          check_equal(axi_stream_transaction.tkeep, std_logic_vector'("1"), result("pop stream keep"));
+          check_equal(axi_stream_transaction.tstrb, std_logic_vector'("1"), result("pop stream strb"));
+          check_equal(axi_stream_transaction.tid, std_logic_vector'(x"11"), result("pop stream id"));
+          check_equal(axi_stream_transaction.tdest, std_logic_vector'(x"22"), result("pop stream dest"));
+          check_equal(axi_stream_transaction.tuser, std_logic_vector'(x"33"), result("pop stream user"));
+        end loop;
       end loop;
 
     elsif run("test single stalled push and pop") then
@@ -330,6 +369,9 @@ begin
       end loop;
 
     elsif run("test passing check") then
+      data := rnd.RandSlv(data'length);
+      keep := (others => '1');
+      strb := (others => '1');
       if id'length > 0 then
         id := x"23";
       end if;
@@ -339,10 +381,14 @@ begin
       if user'length > 0 then
         user := x"45";
       end if;
-      push_axi_stream(net, master_axi_stream, x"12", tlast => '1', tkeep => "1", tstrb => "1", tid => id, tdest => dest, tuser => user);
-      check_axi_stream(net, slave_axi_stream, x"12", '1', "1", "1", id, dest, user, "checking axi stream");
+      push_axi_stream(net, master_axi_stream, data, tlast => '1', tkeep => keep, tstrb => strb, tid => id, tdest => dest, tuser => user);
+      check_axi_stream(net, slave_axi_stream, data, tlast => '1', tkeep => keep, tstrb => strb, tid => id, tdest => dest, tuser => user,
+                       msg => "checking axi stream");
 
     elsif run("test passing reduced check") then
+      data := rnd.RandSlv(data'length);
+      keep := (others => '1');
+      strb := (others => '1');
       if id'length > 0 then
         id := x"23";
       end if;
@@ -352,10 +398,27 @@ begin
       if user'length > 0 then
         user := x"45";
       end if;
-      push_axi_stream(net, master_axi_stream, x"12", tlast => '1', tkeep => "1", tstrb => "1", tid => id, tdest => dest, tuser => user);
-      check_axi_stream(net, slave_axi_stream, x"12", tlast => '1', msg => "reduced checking axi stream");
+      push_axi_stream(net, master_axi_stream, data, tlast => '1', tkeep => keep, tstrb => strb, tid => id, tdest => dest, tuser => user);
+      check_axi_stream(net, slave_axi_stream, data, tlast => '1', msg => "reduced checking axi stream");
+
+    elsif run("test passing with no tkeep") then
+      for blocking in boolean range false to true loop
+        data := x"1234";
+        keep := "10";
+        strb := "10";
+        id := x"23";
+        dest := x"34";
+        user := x"45";
+        push_axi_stream(net, master_axi_stream, data, tlast => '1', tkeep => keep, tstrb => strb, tid => id, tdest => dest, tuser => user);
+        check_axi_stream(net, slave_axi_stream, data xor x"00ff", tlast => '1', tkeep => keep, tstrb => strb, tid => id, tdest => dest,
+                         tuser => user, msg => "checking axi stream", blocking => blocking);
+      end loop;
+      wait_until_idle(net, as_sync(slave_axi_stream));
 
     elsif run("test failing check") then
+      data := (others => '1');
+      keep := (others => '1');
+      strb := (others => '1');
       if id'length > 0 then
         id := x"22";
       end if;
@@ -365,7 +428,7 @@ begin
       if user'length > 0 then
         user := x"44";
       end if;
-      push_axi_stream(net, master_axi_stream, x"11", tlast => '1', tkeep => "0", tstrb => "0", tid => id, tdest => dest, tuser => user);
+      push_axi_stream(net, master_axi_stream, data, tlast => '1', tkeep => keep, tstrb => strb, tid => id, tdest => dest, tuser => user);
       -- Delay mocking the logger to prevent 'invalid checks' from failing the checks below
       wait until rising_edge (aclk) and tvalid = '1';
 
@@ -381,12 +444,19 @@ begin
       if user'length > 0 then
         user := x"45";
       end if;
-      check_axi_stream(net, slave_axi_stream, x"12", '0', "1", "1", id, dest, user, "checking axi stream");
+      check_axi_stream(net, slave_axi_stream, not data, tlast => '0', tkeep => not keep, tstrb => not strb, tid => id, tdest => dest,
+                       tuser => user, msg => "checking axi stream");
 
-      check_log(mocklogger, "TDATA mismatch, checking axi stream - Got 0001_0001 (17). Expected 0001_0010 (18).", error);
+      check_log(mocklogger, "TDATA mismatch, checking axi stream - Got " &
+                to_nibble_string(data) & " (" & to_string(to_integer(data)) & "). Expected " &
+                to_nibble_string(not data) & " (" & to_string(to_integer(not data)) & ").", error);
+      check_log(mocklogger, "TKEEP mismatch, checking axi stream - Got " &
+                to_nibble_string(keep) & " (" & to_string(to_integer(keep)) & "). Expected " &
+                to_nibble_string(not keep) & " (" & to_string(to_integer(not keep)) & ").", error);
+      check_log(mocklogger, "TSTRB mismatch, checking axi stream - Got " &
+                to_nibble_string(strb) & " (" & to_string(to_integer(strb)) & "). Expected " &
+                to_nibble_string(not strb) & " (" & to_string(to_integer(not strb)) & ").", error);
       check_log(mocklogger, "TLAST mismatch, checking axi stream - Got 1. Expected 0.", error);
-      check_log(mocklogger, "TKEEP mismatch, checking axi stream - Got 0 (0). Expected 1 (1).", error);
-      check_log(mocklogger, "TSTRB mismatch, checking axi stream - Got 0 (0). Expected 1 (1).", error);
       if id'length > 0 then
         check_log(mocklogger, "TID mismatch, checking axi stream - Got 0010_0010 (34). Expected 0010_0011 (35).", error);
       end if;
@@ -400,6 +470,8 @@ begin
       unmock(mocklogger);
 
     elsif run("test back-to-back passing check") then
+      keep := (others => '1');
+      strb := (others => '1');
       wait until rising_edge(aclk);
       timestamp := now;
 
@@ -409,10 +481,10 @@ begin
           last := '1';
         end if;
         push_axi_stream(net, master_axi_stream,
-                        tdata => std_logic_vector(to_unsigned(i, 8)),
+                        tdata => to_slv(i, tdata),
                         tlast => last,
-                        tkeep => "1",
-                        tstrb => "1",
+                        tkeep => keep,
+                        tstrb => strb,
                         tid => std_logic_vector(to_unsigned(42, id'length)),
                         tdest => std_logic_vector(to_unsigned(i+1, dest'length)),
                         tuser => std_logic_vector(to_unsigned(i*2, user'length)));
@@ -424,10 +496,10 @@ begin
           last := '1';
         end if;
         check_axi_stream(net, slave_axi_stream,
-                         expected => std_logic_vector(to_unsigned(i, 8)),
+                         expected => to_slv(i, tdata),
                          tlast => last,
-                         tkeep => "1",
-                         tstrb => "1",
+                         tkeep => keep,
+                         tstrb => strb,
                          tid => std_logic_vector(to_unsigned(42, id'length)),
                          tdest => std_logic_vector(to_unsigned(i+1, dest'length)),
                          tuser => std_logic_vector(to_unsigned(i*2, user'length)),
@@ -441,6 +513,8 @@ begin
       check_equal(now, timestamp + (12+1)*10 ns, " transaction time incorrect");
 
     elsif run("test back-to-back passing reduced check") then
+      keep := (others => '1');
+      strb := (others => '1');
       wait until rising_edge(aclk);
       timestamp := now;
 
@@ -450,10 +524,10 @@ begin
           last := '1';
         end if;
         push_axi_stream(net, master_axi_stream,
-                        tdata => std_logic_vector(to_unsigned(i, 8)),
+                        tdata => to_slv(i, tdata),
                         tlast => last,
-                        tkeep => "1",
-                        tstrb => "1",
+                        tkeep => keep,
+                        tstrb => strb,
                         tid => std_logic_vector(to_unsigned(42, id'length)),
                         tdest => std_logic_vector(to_unsigned(i+1, dest'length)),
                         tuser => std_logic_vector(to_unsigned(i*2, user'length)));
@@ -465,7 +539,7 @@ begin
           last := '1';
         end if;
         check_axi_stream(net, slave_axi_stream,
-                         expected => std_logic_vector(to_unsigned(i, 8)),
+                         expected => to_slv(i, tdata),
                          tlast => last,
                          msg  => "check non-blocking",
                          blocking  => false);
@@ -477,23 +551,26 @@ begin
       check_equal(now, timestamp + (12+1)*10 ns, " transaction time incorrect");
 
     elsif run("test back-to-back failing check") then
+      data := (others => '1');
+      keep := (others => '1');
+      strb := (others => '1');
       wait until rising_edge(aclk);
       timestamp := now;
 
       push_axi_stream(net, master_axi_stream,
-                      tdata => std_logic_vector(to_unsigned(3, 8)),
+                      tdata => data,
                       tlast => '1',
-                      tkeep => "0",
-                      tstrb => "0",
+                      tkeep => keep,
+                      tstrb => strb,
                       tid => std_logic_vector(to_unsigned(42, id'length)),
                       tdest => std_logic_vector(to_unsigned(4, dest'length)),
                       tuser => std_logic_vector(to_unsigned(7, user'length)));
 
       check_axi_stream(net, slave_axi_stream,
-                       expected => std_logic_vector(to_unsigned(6, 8)),
+                       expected => not data,
                        tlast => '0',
-                       tkeep => "1",
-                       tstrb => "1",
+                       tkeep => not keep,
+                       tstrb => not strb,
                        tid => std_logic_vector(to_unsigned(44, id'length)),
                        tdest => std_logic_vector(to_unsigned(5, dest'length)),
                        tuser => std_logic_vector(to_unsigned(8, g_user_length)),
@@ -510,9 +587,15 @@ begin
       wait until rising_edge(aclk) and tvalid = '1';
       wait for 1 ps;
 
-      check_log(mocklogger, "TDATA mismatch, check non-blocking - Got 0000_0011 (3). Expected 0000_0110 (6).", error);
-      check_log(mocklogger, "TKEEP mismatch, check non-blocking - Got 0 (0). Expected 1 (1).", error);
-      check_log(mocklogger, "TSTRB mismatch, check non-blocking - Got 0 (0). Expected 1 (1).", error);
+      check_log(mocklogger, "TDATA mismatch, check non-blocking - Got " &
+                to_nibble_string(data) & " (" & to_string(to_integer(data)) & "). Expected " &
+                to_nibble_string(not data) & " (" & to_string(to_integer(not data)) & ").", error);
+      check_log(mocklogger, "TKEEP mismatch, check non-blocking - Got " &
+                to_nibble_string(keep) & " (" & to_string(to_integer(keep)) & "). Expected " &
+                to_nibble_string(not keep) & " (" & to_string(to_integer(not keep)) & ").", error);
+      check_log(mocklogger, "TSTRB mismatch, check non-blocking - Got " &
+                to_nibble_string(keep) & " (" & to_string(to_integer(keep)) & "). Expected " &
+                to_nibble_string(not keep) & " (" & to_string(to_integer(not keep)) & ").", error);
       check_log(mocklogger, "TLAST mismatch, check non-blocking - Got 1. Expected 0.", error);
       if id'length > 0 then
         check_log(mocklogger, "TID mismatch, check non-blocking - Got 0010_1010 (42). Expected 0010_1100 (44).", error);
@@ -593,26 +676,29 @@ begin
       tready   => tready,
       tdata    => tdata,
       tlast    => tlast,
-      tkeep    => tkeep,
-      tstrb    => tstrb,
+      tkeep    => tkeep_from_master,
+      tstrb    => tstrb_from_master,
       tid      => tid,
       tuser    => tuser,
       tdest    => tdest);
 
+  tkeep <= tkeep_from_master when connected_tkeep else (others => '1');
+  tstrb <= tstrb_from_master when connected_tstrb else (others => 'U');
+
  not_valid <= not tvalid;
 
- not_valid_data <= '1' when tdata = std_logic_vector'("XXXXXXXX") else '0';
+ not_valid_data <= '1' when is_x(tdata) else '0';
  check_true(aclk, not_valid, not_valid_data, "Invalid data not X");
- not_valid_keep <= '1' when tkeep = std_logic_vector'("X") else '0';
+ not_valid_keep <= '1' when is_x(tkeep_from_master) else '0';
  check_true(aclk, not_valid, not_valid_keep, "Invalid keep not X");
- not_valid_strb <= '1' when tstrb = std_logic_vector'("X") else '0';
+ not_valid_strb <= '1' when is_x(tstrb_from_master) else '0';
  check_true(aclk, not_valid, not_valid_strb, "Invalid strb not X");
  GEN_CHECK_INVALID_ID: if g_id_length > 0 generate
-   not_valid_id   <= '1' when tid   = std_logic_vector'("XXXXXXXX") else '0';
+   not_valid_id   <= '1' when is_x(tid) else '0';
    check_true(aclk, not_valid, not_valid_id,   "Invalid id not X");
  end generate;
  GEN_CHECK_INVALID_DEST: if g_dest_length > 0 generate
-   not_valid_dest <= '1' when tdest = std_logic_vector'("XXXXXXXX") else '0';
+   not_valid_dest <= '1' when is_x(tdest) else '0';
    check_true(aclk, not_valid, not_valid_dest, "Invalid dest not X");
  end generate;
  GEN_CHECK_INVALID_USER: if g_user_length > 0 generate

@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -10,12 +10,11 @@ use ieee.std_logic_1164.all;
 use work.logger_pkg.all;
 use work.checker_pkg.all;
 use work.check_pkg.all;
-use work.stream_master_pkg.all;
-use work.stream_slave_pkg.all;
+use work.stream_master_pkg.stream_master_t;
+use work.stream_slave_pkg.stream_slave_t;
 use work.sync_pkg.all;
-context work.vunit_context;
-context work.com_context;
-context work.data_types_context;
+use work.com_pkg.all;
+use work.com_types_pkg.all;
 
 package axi_stream_pkg is
 
@@ -335,6 +334,8 @@ package axi_stream_pkg is
     max_stall_cycles  : natural
   ) return stall_config_t;
 
+  function is_u(value : std_ulogic_vector) return boolean;
+
 end package;
 
 package body axi_stream_pkg is
@@ -608,8 +609,8 @@ package body axi_stream_pkg is
     ) is
     variable msg             : msg_t := new_msg(push_axi_stream_msg);
     variable normalized_data : std_logic_vector(data_length(axi_stream)-1 downto 0) := (others => '0');
-    variable normalized_keep : std_logic_vector(data_length(axi_stream)/8-1 downto 0) := (others => '0');
-    variable normalized_strb : std_logic_vector(data_length(axi_stream)/8-1 downto 0) := (others => '0');
+    variable normalized_keep : std_logic_vector(data_length(axi_stream)/8-1 downto 0) := (others => '1');
+    variable normalized_strb : std_logic_vector(data_length(axi_stream)/8-1 downto 0) := (others => '1');
     variable normalized_id   : std_logic_vector(id_length(axi_stream)-1 downto 0) := (others => '0');
     variable normalized_dest : std_logic_vector(dest_length(axi_stream)-1 downto 0) := (others => '0');
     variable normalized_user : std_logic_vector(user_length(axi_stream)-1 downto 0) := (others => '0');
@@ -619,6 +620,7 @@ package body axi_stream_pkg is
     push_std_ulogic(msg, tlast);
     normalized_keep(tkeep'length-1 downto 0) := tkeep;
     push_std_ulogic_vector(msg, normalized_keep);
+    normalized_strb := normalized_keep;
     normalized_strb(tstrb'length-1 downto 0) := tstrb;
     push_std_ulogic_vector(msg, normalized_strb);
     normalized_id(tid'length-1 downto 0) := tid;
@@ -728,6 +730,7 @@ package body axi_stream_pkg is
       msg      : string           := "";
       blocking : boolean          := true
     ) is
+    constant expected_normalized : std_logic_vector(expected'length - 1 downto 0) := expected;
     variable got_tdata : std_logic_vector(data_length(axi_stream)-1 downto 0);
     variable got_tlast : std_logic;
     variable got_tkeep : std_logic_vector(data_length(axi_stream)/8-1 downto 0);
@@ -736,17 +739,28 @@ package body axi_stream_pkg is
     variable got_tdest : std_logic_vector(dest_length(axi_stream)-1 downto 0);
     variable got_tuser : std_logic_vector(user_length(axi_stream)-1 downto 0);
     variable check_msg : msg_t := new_msg(check_axi_stream_msg);
+    variable mismatch : boolean;
   begin
     if blocking then
       pop_axi_stream(net, axi_stream, got_tdata, got_tlast, got_tkeep, got_tstrb, got_tid, got_tdest, got_tuser);
-      check_equal(got_tdata, expected, "TDATA mismatch, " & msg);
-      check_equal(got_tlast, tlast, "TLAST mismatch, " & msg);
+      mismatch := false;
+      for idx in got_tkeep'range loop
+        if got_tkeep(idx) and got_tstrb(idx) then
+          mismatch := got_tdata(8 * idx + 7 downto 8 * idx) /= expected_normalized(8 * idx + 7 downto 8 * idx);
+          exit when mismatch;
+        end if;
+      end loop;
+      if mismatch then
+        check_equal(got_tdata, expected, "TDATA mismatch, " & msg);
+      end if;
+
       if tkeep'length > 0 then
         check_equal(got_tkeep, tkeep, "TKEEP mismatch, " & msg);
       end if;
       if tstrb'length > 0 then
         check_equal(got_tstrb, tstrb, "TSTRB mismatch, " & msg);
       end if;
+      check_equal(got_tlast, tlast, "TLAST mismatch, " & msg);
       if tid'length > 0 then
         check_equal(got_tid, tid, "TID mismatch, " & msg);
       end if;
@@ -827,6 +841,17 @@ package body axi_stream_pkg is
       min_stall_cycles  => min_stall_cycles,
       max_stall_cycles  => max_stall_cycles);
     return stall_config;
+  end;
+
+  function is_u(value : std_ulogic_vector) return boolean is
+  begin
+    for idx in value'range loop
+      if value(idx) /= 'U' then
+        return false;
+      end if;
+    end loop;
+
+    return true;
   end;
 
 end package body;

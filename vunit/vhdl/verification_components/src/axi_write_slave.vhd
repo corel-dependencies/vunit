@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -11,15 +11,18 @@ use ieee.numeric_std.all;
 use work.axi_pkg.all;
 use work.axi_slave_pkg.all;
 use work.axi_slave_private_pkg.all;
-use work.queue_pkg.all;
-use work.memory_pkg.all;
+use work.com_pkg.net;
 use work.integer_vector_ptr_pkg.all;
 use work.integer_vector_ptr_pool_pkg.all;
-context work.com_context;
+use work.memory_pkg.all;
+use work.queue_pkg.all;
 
 entity axi_write_slave is
   generic (
-    axi_slave : axi_slave_t);
+    axi_slave : axi_slave_t;
+    drive_invalid : boolean := true;
+    drive_invalid_val : std_logic := 'X'
+  );
   port (
     aclk : in std_logic;
 
@@ -41,7 +44,7 @@ entity axi_write_slave is
     bready : in std_logic;
     bid : out std_logic_vector;
     bresp : out axi_resp_t
-    );
+  );
 end entity;
 
 architecture a of axi_write_slave is
@@ -98,6 +101,14 @@ begin
 
   axi_process : process
 
+    procedure drive_b_invalid is
+    begin
+      if drive_invalid then
+        bid <= (bid'range => drive_invalid_val);
+        bresp <= (bresp'range => drive_invalid_val);
+      end if;
+    end procedure;
+
     procedure record_input_data(variable input_data : inout burst_data_t;
                                 address : natural; byte : natural) is
       variable ignored : boolean;
@@ -132,19 +143,19 @@ begin
     variable response_time : time;
     variable has_response_time : boolean := false;
   begin
-    -- Initialization
-    bid <= (bid'range => '0');
-    bresp <= (bresp'range => '0');
-
-    assert awid'length = bid'length report "arwid vs wid data width mismatch";
+    assert awid'length = bid'length report "awid vs wid data width mismatch";
     assert (awlen'length = 4 or
             awlen'length = 8) report "awlen must be either 4 (AXI3) or 8 (AXI4)";
+
+    -- Initialization
+    drive_b_invalid;
 
     wait on initialized until initialized;
 
     loop
       if bready = '1' then
         bvalid <= '0';
+        drive_b_invalid;
       end if;
 
       if (awvalid and awready) = '1' then
@@ -245,7 +256,7 @@ begin
       end if;
 
       if self.should_check_well_behaved and num_beats_now > 0 and wvalid /= '1' then
-        self.fail("Burst not well behaved, vwalid was not high during active burst");
+        self.fail("Burst not well behaved, wvalid was not high during active burst");
       end if;
 
       if self.should_check_well_behaved and num_beats_now > 0 and bready /= '1' then
