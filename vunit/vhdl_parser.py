@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 # pylint: disable=too-many-lines
 
@@ -86,7 +86,7 @@ class VHDLDesignFile(object):  # pylint: disable=too-many-instance-attributes
 
     _component_re = re.compile(
         r"[a-zA-Z]\w*\s*\:\s*(?:component)?\s*(?:(?:[a-zA-Z]\w*)\.)?([a-zA-Z]\w*)\s*"
-        r"(?:generic|port) map\s*\([\s\w\=\>\,\.\)\(\+\-\'\"]*\);",
+        r"(?:generic|port) map\s*\([\s\w\=\>\,\.\)\(\+\-\*\/\'\"]*\);",
         re.IGNORECASE,
     )
 

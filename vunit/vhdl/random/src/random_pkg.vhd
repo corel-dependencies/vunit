@@ -2,18 +2,16 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 -- Optional package that includes random functions for the data_types based on
 -- OSVVM
 
-library vunit_lib;
-context vunit_lib.vunit_context;
-use vunit_lib.integer_vector_ptr_pkg.all;
-use vunit_lib.integer_array_pkg.all;
-
 library osvvm;
-use osvvm.RandomPkg.all;
+use osvvm.RandomPkg.RandomPType;
+
+use work.integer_vector_ptr_pkg.all;
+use work.integer_array_pkg.all;
 
 package random_pkg is
   procedure random_integer_vector_ptr(variable rnd : inout RandomPType;

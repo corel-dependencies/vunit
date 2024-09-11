@@ -4,11 +4,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 from pathlib import Path
 from vunit import VUnit, VUnitCLI
 from io import StringIO
+from multiprocessing import cpu_count
 import sys
 import re
 from tools.doc_support import highlight_code, highlight_log, LogRegistry
@@ -90,6 +91,15 @@ def extract_snippets():
         )
 
     for snippet in [
+        "tb_fail_on_warning",
+    ]:
+        highlight_code(
+            root / "tb_fail_on_warning.vhd",
+            root / ".." / "img" / f"{snippet}.html",
+            snippet,
+        )
+
+    for snippet in [
         "tb_stop_level",
     ]:
         highlight_code(
@@ -163,7 +173,7 @@ for test_pattern in test_patterns:
         args.verbose = True
         options += " -v"
 
-    vu = VUnit.from_args(args=args, compile_builtins=False)
+    vu = VUnit.from_args(args=args)
     vu.add_vhdl_builtins()
 
     lib = vu.add_library("lib")
@@ -194,8 +204,8 @@ for test_pattern in test_patterns:
             test_case_names = list(test_case_names)
             test_case_names.sort()
             name = "_".join(test_case_names)
-            if args.num_threads > 1:
-                options += f" -p{args.num_threads}"
+            if args.num_threads != 1:
+                options += f" -p{args.num_threads or cpu_count()}"
             if len(test_case_names) == 1:
                 (root / f"{name}_stdout.txt").write_text(f"> python run.py{options}\n" + std_out)
             else:

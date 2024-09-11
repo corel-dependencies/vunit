@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 PyPI setup script
@@ -69,13 +69,15 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX :: Linux",
         "Topic :: Software Development :: Testing",
         "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=["colorama"],
     requires=["colorama"],
     license="Mozilla Public License 2.0 (MPL 2.0)",

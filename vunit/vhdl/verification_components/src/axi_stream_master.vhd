@@ -2,21 +2,26 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 library ieee;
 use ieee.std_logic_1164.all;
 
-context work.vunit_context;
-context work.com_context;
-use work.stream_master_pkg.all;
-use work.axi_stream_pkg.all;
-use work.axi_stream_private_pkg.all;
-use work.queue_pkg.all;
-use work.sync_pkg.all;
-
 library osvvm;
 use osvvm.RandomPkg.RandomPType;
+
+use work.axi_stream_pkg.all;
+use work.axi_stream_private_pkg.probability_stall_axi_stream;
+use work.com_pkg.net;
+use work.com_pkg.receive;
+use work.com_types_pkg.all;
+use work.id_pkg.all;
+use work.queue_pkg.all;
+use work.stream_master_pkg.stream_push_msg;
+use work.sync_pkg.all;
+use work.event_common_pkg.is_active;
+use work.event_common_pkg.notify;
+use work.event_pkg.all;
 
 entity axi_stream_master is
   generic (
@@ -32,8 +37,8 @@ entity axi_stream_master is
     tready       : in  std_logic                                          := '1';
     tdata        : out std_logic_vector(data_length(master)-1 downto 0)   := (others => '0');
     tlast        : out std_logic                                          := '0';
-    tkeep        : out std_logic_vector(data_length(master)/8-1 downto 0) := (others => '0');
-    tstrb        : out std_logic_vector(data_length(master)/8-1 downto 0) := (others => '0');
+    tkeep        : out std_logic_vector(data_length(master)/8-1 downto 0) := (others => '1');
+    tstrb        : out std_logic_vector(data_length(master)/8-1 downto 0) := (others => '1');
     tid          : out std_logic_vector(id_length(master)-1 downto 0)     := (others => '0');
     tdest        : out std_logic_vector(dest_length(master)-1 downto 0)   := (others => '0');
     tuser        : out std_logic_vector(user_length(master)-1 downto 0)   := (others => '0')
@@ -44,7 +49,10 @@ architecture a of axi_stream_master is
 
   constant notify_request_msg      : msg_type_t := new_msg_type("notify request");
   constant message_queue           : queue_t    := new_queue;
-  signal   notify_bus_process_done : std_logic  := '0';
+  constant bus_process_done_base_id : id_t       := get_id("vunit_lib:axi_stream_master:bus_process_done");
+  constant bus_process_done_id      : id_t       := get_id(to_string(num_children(bus_process_done_base_id)), parent => bus_process_done_base_id);
+  signal bus_process_done           : event_t    := new_event(bus_process_done_id);
+
 
   procedure drive_invalid_output(signal l_tdata : out std_logic_vector(data_length(master)-1 downto 0);
                                  signal l_tkeep : out std_logic_vector(data_length(master)/8-1 downto 0);
@@ -79,7 +87,7 @@ begin
     elsif msg_type = wait_until_idle_msg then
       notify_msg := new_msg(notify_request_msg);
       push(message_queue, notify_msg);
-      wait on notify_bus_process_done until is_empty(message_queue);
+      wait until is_active(bus_process_done) and is_empty(message_queue);
       handle_wait_until_idle(net, msg_type, request_msg);
     else
       unexpected_msg_type(msg_type);
@@ -152,9 +160,7 @@ begin
           delete(msg);
         end loop;
 
-        notify_bus_process_done <= '1';
-        wait until notify_bus_process_done = '1';
-        notify_bus_process_done <= '0';
+        notify(bus_process_done);
       end if;
     end loop;
   end process;

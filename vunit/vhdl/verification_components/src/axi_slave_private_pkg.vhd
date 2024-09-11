@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 -- Private support package for axi_{read, write}_slave.vhd
 
@@ -12,15 +12,21 @@ use ieee.numeric_std.all;
 
 use std.textio.all;
 
-use work.axi_pkg.all;
-use work.queue_pkg.all;
-use work.integer_vector_ptr_pkg.all;
-context work.vunit_context;
-context work.com_context;
-context work.vc_context;
-
 library osvvm;
-use osvvm.RandomPkg.all;
+use osvvm.RandomPkg.RandomPType;
+
+use work.axi_pkg.all;
+use work.axi_slave_pkg.all;
+use work.axi_statistics_pkg.all;
+use work.bus_master_pkg.bus_master_t;
+use work.com_pkg.receive;
+use work.com_pkg.reply;
+use work.com_pkg.acknowledge;
+use work.com_types_pkg.all;
+use work.integer_vector_ptr_pkg.all;
+use work.log_levels_pkg.all;
+use work.logger_pkg.all;
+use work.queue_pkg.all;
 
 package axi_slave_private_pkg is
 
@@ -432,7 +438,7 @@ package body axi_slave_private_pkg is
       variable first_page, last_page : integer;
     begin
       first_address := burst.address - (burst.address mod data_size); -- Aligned
-      last_address := burst.address + burst.size*burst.length - 1;
+      last_address := first_address + burst.size*burst.length - 1;
 
       first_page := first_address / 4096;
       last_page := last_address / 4096;

@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -353,6 +353,14 @@ begin
       buf := allocate(memory, length(data), permissions => no_access);
       transfer(x"2", buf, log_size, data);
 
+    elsif run("Test unaligned write around 4kbyte boundary") then
+      -- Do one beat write at unaligned address starting around 4kB boundary
+      log_size := log_data_size;
+      buf := allocate(memory, 4096 - 2**log_size + 1, permissions => no_access);
+      random_integer_vector_ptr(rnd, data, 2**log_size , 0, 255);
+      buf := allocate(memory, length(data), permissions => no_access); -- Unaligned address
+      transfer(x"2", buf, log_size, data);
+
     elsif run("Test error on missing tlast fixed") then
       mock(axi_slave_logger, failure);
 
@@ -569,7 +577,7 @@ begin
       bready <= '1';
       wait until rising_edge(clk);
       write_addr(x"0", base_address(buf), len => 2, log_size => log_data_size, burst => axi_burst_type_incr);
-      check_only_log(axi_slave_logger, "Burst not well behaved, vwalid was not high during active burst", failure);
+      check_only_log(axi_slave_logger, "Burst not well behaved, wvalid was not high during active burst", failure);
       unmock(axi_slave_logger);
 
     elsif run("Test well behaved check fails when bready not high during active burst") then
@@ -604,7 +612,7 @@ begin
       assert awready = '0';
       wait until mock_queue_length > 0 for 0 ns;
 
-      check_only_log(axi_slave_logger, "Burst not well behaved, vwalid was not high during active burst", failure);
+      check_only_log(axi_slave_logger, "Burst not well behaved, wvalid was not high during active burst", failure);
       unmock(axi_slave_logger);
 
     end if;
@@ -612,6 +620,20 @@ begin
     test_runner_cleanup(runner);
   end process;
   test_runner_watchdog(runner, 1 ms);
+
+  check_not_valid : process
+    constant bid_invalid_value : std_logic_vector(bid'range) := (others => 'X');
+    constant bresp_invalid_value : std_logic_vector(bresp'range) := (others => 'X');
+  begin
+    wait until rising_edge(clk);
+
+    -- All signals should be driven with 'X' when the channel is not valid
+    -- (AW and W have no outputs from the VC, except for handshake, so check is only for B).
+    if not bvalid then
+      check_equal(bid, bid_invalid_value, "BID not X when BVALID low");
+      check_equal(bresp, bresp_invalid_value, "BRESP not X when BVALID low");
+    end if;
+  end process;
 
   dut : entity work.axi_write_slave
     generic map (

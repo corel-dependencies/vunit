@@ -2,14 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2023, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Contains classes to represent a test bench and test cases
 """
 
 import logging
-from pathlib import Path
 import re
 import bisect
 import collections
@@ -32,8 +31,7 @@ class TestBench(ConfigurationVisitor):
     """
 
     def __init__(self, design_unit, database=None):
-        ConfigurationVisitor.__init__(self)
-        self.design_unit = design_unit
+        ConfigurationVisitor.__init__(self, design_unit)
         self._database = database
 
         self._individual_tests = False
@@ -75,24 +73,6 @@ class TestBench(ConfigurationVisitor):
         if self._individual_tests:
             raise RuntimeError(f"Test bench {self.library_name!s}.{self.name!s} has individually configured tests")
         return self._configs[DEFAULT_NAME]
-
-    @staticmethod
-    def _check_architectures(design_unit):
-        """
-        Check that an entity which has been classified as a VUnit test bench
-        has exactly one architecture. Raise RuntimeError otherwise.
-        """
-        if design_unit.is_entity:
-            if not design_unit.architecture_names:
-                raise RuntimeError(f"Test bench '{design_unit.name!s}' has no architecture.")
-
-            if len(design_unit.architecture_names) > 1:
-                archs = ", ".join(
-                    f"{name!s}:{Path(fname).name!s}" for name, fname in sorted(design_unit.architecture_names.items())
-                )
-                raise RuntimeError(
-                    "Test bench not allowed to have multiple architectures. " f"Entity {design_unit.name!s} has {archs}"
-                )
 
     def create_tests(self, simulator_if, elaborate_only, test_list=None):
         """
@@ -204,13 +184,7 @@ class TestBench(ConfigurationVisitor):
                         f"{file_name!s} line {attr.location.lineno:d}"
                     )
 
-        attribute_names = [attr.name for attr in attributes]
-
         default_config = Configuration(DEFAULT_NAME, self.design_unit)
-
-        if "fail_on_warning" in attribute_names:
-            default_config.set_sim_option("vhdl_assert_stop_level", "warning")
-
         self._configs = OrderedDict({default_config.name: default_config})
 
         explicit_tests = [test for test in tests if test.is_explicit]
@@ -223,11 +197,67 @@ class TestBench(ConfigurationVisitor):
             assert len(tests) == 1
             self._implicit_test = tests[0]
 
-        self._individual_tests = "run_all_in_same_sim" not in attribute_names and len(explicit_tests) > 0
+        self._individual_tests = len(explicit_tests) > 0
         self._test_cases = [
             TestConfigurationVisitor(test, self.design_unit, self._individual_tests, default_config.copy())
             for test in explicit_tests
         ]
+
+        # This must be done after self._test_cases have been created such that run_all_in_same_sim can disable them
+        for attr in attributes:
+            self.set_attribute(attr.name, attr.value)
+
+    def set_attribute(self, name, value):
+        """
+        Set attributes except fail_on_warning and run_all_in_same_sim which have special meanings
+        """
+        if name == "fail_on_warning":
+            self.set_sim_option("vhdl_assert_stop_level", "warning" if value or value is None else "error")
+            return
+
+        if name == "run_all_in_same_sim":
+            run_all_in_same_sim = value or value is None
+            for test_case in self._test_cases:
+                test_case.enable_configuration = not run_all_in_same_sim
+
+            self._individual_tests = not run_all_in_same_sim and len(self._test_cases) > 0
+
+            return
+
+        super().set_attribute(name, value)
+
+    def add_config(  # pylint: disable=too-many-arguments
+        self,
+        name,
+        generics=None,
+        pre_config=None,
+        post_check=None,
+        sim_options=None,
+        attributes=None,
+        vhdl_configuration_name=None,
+    ):
+        """
+        Add a configuration copying unset fields from the default configuration.
+
+        fail_on_warning and run_all_in_same_sim have special meaning and are handled
+        separately.
+        """
+        if attributes:
+            if "fail_on_warning" in attributes:
+                value = attributes["fail_on_warning"]
+                self.set_sim_option("vhdl_assert_stop_level", "warning" if value or value is None else "error")
+                del attributes["fail_on_warning"]
+
+            if "run_all_in_same_sim" in attributes:
+                value = attributes["run_all_in_same_sim"]
+                run_all_in_same_sim = value or value is None
+                for test_case in self._test_cases:
+                    test_case.enable_configuration = not run_all_in_same_sim
+
+                self._individual_tests = not run_all_in_same_sim and len(self._test_cases) > 0
+                del attributes["run_all_in_same_sim"]
+
+        super().add_config(name, generics, pre_config, post_check, sim_options, attributes, vhdl_configuration_name)
 
 
 class FileLocation(object):
@@ -332,11 +362,10 @@ class TestConfigurationVisitor(ConfigurationVisitor):
     """
 
     def __init__(self, test, design_unit, enable_configuration, default_config):
-        ConfigurationVisitor.__init__(self)
+        ConfigurationVisitor.__init__(self, design_unit)
         self._test = test
         assert test.is_explicit
-        self.design_unit = design_unit
-        self._enable_configuration = enable_configuration
+        self.enable_configuration = enable_configuration
         self._configs = OrderedDict({default_config.name: default_config})
 
     @property
@@ -355,7 +384,7 @@ class TestConfigurationVisitor(ConfigurationVisitor):
         return self._configs[DEFAULT_NAME]
 
     def _check_enabled(self):
-        if not self._enable_configuration:
+        if not self.enable_configuration:
             raise RuntimeError("Individual test configuration is not possible with run_all_in_same_sim")
 
     def get_configuration_dicts(self):  # pylint: disable=arguments-differ
