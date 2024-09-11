@@ -7,6 +7,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+use work.check_pkg.all;
+use work.checker_pkg.all;
 use work.com_pkg.net;
 use work.com_pkg.receive;
 use work.com_pkg.reply;
