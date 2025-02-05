@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 use std.textio.all;
 
@@ -943,6 +943,10 @@ begin
 
        check_log_file(file_handlers(i), log_file_name & integer'image(i), entries);
      end loop;
+
+   elsif run("Test logger to/from integer conversion") then
+     assert_true(to_logger(to_integer(logger)) = logger);
+     assert_true(to_logger(to_integer(null_logger)) = null_logger);
 
     end if;
 

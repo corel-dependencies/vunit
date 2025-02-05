@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 context vc_context is
   library vunit_lib;
@@ -19,6 +19,7 @@ context vc_context is
   use vunit_lib.stream_slave_pkg.all;
   use vunit_lib.sync_pkg.all;
   use vunit_lib.uart_pkg.all;
+  use vunit_lib.vc_pkg.all;
   use vunit_lib.wishbone_pkg.all;
   context vunit_lib.com_context;
 end context;

@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this file,
 -- You can obtain one at http://mozilla.org/MPL/2.0/.
 --
--- Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+-- Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 package body logger_pkg is
   constant global_log_count : integer_vector_ptr_t := new_integer_vector_ptr(1, value => 0);
@@ -34,6 +34,11 @@ package body logger_pkg is
   impure function to_integer(logger : logger_t) return integer is
   begin
     return to_integer(logger.p_data);
+  end;
+
+  impure function to_logger(value : integer) return logger_t is
+  begin
+    return (p_data => to_integer_vector_ptr(value));
   end;
 
   procedure add_child(logger : logger_t; child : logger_t) is

@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Interface towards Aldec Riviera Pro
@@ -281,7 +281,9 @@ class RivieraProInterface(VsimSimulatorMixin, SimulatorInterface):
             libraries[key] = str((Path(library_cfg_file).parent / (Path(value).parent)).resolve())
         return libraries
 
-    def _create_load_function(self, test_suite_name, config, output_path):  # pylint: disable=unused-argument
+    def _create_load_function(
+        self, test_suite_name, config, output_path, optimize_design
+    ):  # pylint: disable=unused-argument
         """
         Create the vunit_load TCL function that runs the vsim command and loads the design
         """
