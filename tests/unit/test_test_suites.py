@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Test the test suites
@@ -105,6 +105,7 @@ test_suite_done""",
                 elaborate_only=False,
                 test_suite_name=None,
                 test_cases=expected,
+                seed="seed"
             )
             results = run._read_test_results(file_name=file_name)  # pylint: disable=protected-access
             self.assertEqual(results, expected)
@@ -179,6 +180,7 @@ test_suite_done""",
                 elaborate_only=False,
                 test_suite_name=None,
                 test_cases=expected,
+                seed="seed"
             )
 
             results = run._read_test_results(file_name=file_name)  # pylint: disable=protected-access

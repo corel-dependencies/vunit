@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 # pylint: disable=too-many-public-methods, too-many-lines
 
@@ -909,7 +909,7 @@ if run("Test_2")
         """
         Helper method to reduce boiler plate
         """
-        return test_bench.create_tests("simulator_if", elaborate_only=False)
+        return test_bench.create_tests("simulator_if", seed="seed", elaborate_only=False)
 
 
 def get_config_of(tests, test_name):

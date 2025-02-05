@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 PyPI setup script
@@ -65,21 +67,20 @@ setup(
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
         "Natural Language :: English",
         "Intended Audience :: Developers",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX :: Linux",
         "Topic :: Software Development :: Testing",
         "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     install_requires=["colorama"],
-    requires=["colorama"],
     license="Mozilla Public License 2.0 (MPL 2.0)",
     author="Lars Asplund",
     author_email="lars.anders.asplund@gmail.com",

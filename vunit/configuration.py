@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Contains Configuration class which contains configuration of a test run
@@ -34,6 +34,7 @@ class Configuration(object):  # pylint: disable=too-many-instance-attributes
         self,
         name,
         design_unit,
+        *,
         generics=None,
         sim_options=None,
         pre_config=None,
@@ -282,6 +283,7 @@ class ConfigurationVisitor(object):
     def add_config(  # pylint: disable=too-many-arguments
         self,
         name,
+        *,
         generics=None,
         pre_config=None,
         post_check=None,

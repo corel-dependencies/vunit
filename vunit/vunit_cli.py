@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 .. _custom_cli:
@@ -245,6 +245,12 @@ def _create_argument_parser(description=None, for_documentation=False):
     parser.add_argument("--export-json", default=None, help="Export project information to a JSON file.")
 
     parser.add_argument("--version", action="version", version=version())
+
+    parser.add_argument(
+        "--seed",
+        default=None,
+        help="Base seed provided to the simulation. Must be 16 hex digits. Default seed is generated from system time.",
+    )
 
     SIMULATOR_FACTORY.add_arguments(parser)
 

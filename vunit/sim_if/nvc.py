@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Copyright (c) 2014-2024, Lars Asplund lars.anders.asplund@gmail.com
+# Copyright (c) 2014-2025, Lars Asplund lars.anders.asplund@gmail.com
 
 """
 Interface for NVC simulator
@@ -74,7 +74,7 @@ class NVCInterface(SimulatorInterface, ViewerMixin):  # pylint: disable=too-many
         return cls.find_toolchain([cls.executable])
 
     def __init__(  # pylint: disable=too-many-arguments
-        self, output_path, prefix, num_threads, gui=False, viewer_fmt=None, viewer_args="", viewer=None
+        self, output_path, prefix, *, num_threads, gui=False, viewer_fmt=None, viewer_args="", viewer=None
     ):
         SimulatorInterface.__init__(self, output_path, gui)
         if viewer_fmt == "ghw":
@@ -305,9 +305,12 @@ class NVCInterface(SimulatorInterface, ViewerMixin):  # pylint: disable=too-many
             status = False
 
         if config.sim_options.get(self.name + ".gtkwave_script.gui", None):
-            LOGGER.warning("%s.gtkwave_script.gui is deprecated and will be removed "
-                           "in a future version, use %s.viewer_script.gui instead",
-                           self.name, self.name)
+            LOGGER.warning(
+                "%s.gtkwave_script.gui is deprecated and will be removed "
+                "in a future version, use %s.viewer_script.gui instead",
+                self.name,
+                self.name,
+            )
 
         if self._gui and not elaborate_only:
             cmd = [self._get_viewer(config)] + shlex.split(self._viewer_args) + [str(wave_file)]
